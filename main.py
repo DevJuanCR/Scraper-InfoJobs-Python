@@ -1,4 +1,5 @@
 import time
+import random
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -24,7 +25,7 @@ def check_captcha(driver):
         
         # si sale, damos 120 segundos (2 min) para resolverlo a mano
         WebDriverWait(driver, 120).until(
-            EC.presence_of_element_located((By.XPATH, "//a[@data-e2e='candidate-login']")) # XPATH del boton "Acceso Candidatos" (He utilizado este xpath ya que es un boton que se carga cuando estamos en la pagina deseada)
+            EC.presence_of_element_located((By.XPATH, "//a[@data-e2e='candidate-login']")) # XPATH del boton "Acceso Candidatos"
         )
         print("Captcha superado, continuamos")
     except:
@@ -98,6 +99,93 @@ def sacar_datos(elem, driver):
         print(f"  Error sacando datos: {e}")
         return None
 
+def scrapear_ofertas(driver):
+    # aqui hacemos scroll lento y vamos cogiendo ir cogiendo ofertas
+    print("Empezando scraping con scroll lento...")
+    
+    ofertas_ya_sacadas = set()  # usamos un set para guardar los links y no repetir ofertas
+    todas_ofertas = [] # lista final donde guardaremos los datos
+    
+    # esperamos a que carguen las primeras ofertas
+    try:
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "li.ij-List-item.sui-PrimitiveLinkBox")) # Class que tienen las ofertas
+        )
+        print("Primeras ofertas cargadas")
+        time.sleep(2)
+    except:
+        print("No se cargaron ofertas :/")
+        return []
+    
+    # volvemos arriba del todo por si acaso
+    driver.execute_script("window.scrollTo(0, 0);")
+    time.sleep(1)
+    
+    altura = 0
+    altura_total = driver.execute_script("return document.body.scrollHeight") # altura total de la pagina
+    scroll_px = 400  # bajamos 400px cada vez
+    veces_sin_ofertas = 0 # contador para saber cuando parar
+    
+    print(f"Altura pagina inicial: {altura_total}px")
+    
+    contador_scrolls = 0
+    
+    # bucle para ir bajando mientras no lleguemos al final
+    while altura < altura_total:
+        contador_scrolls += 1
+        altura += scroll_px
+        driver.execute_script(f"window.scrollTo(0, {altura});") # hacemos scroll
+        
+        # esperar random para parecer humano (entre 1 y 2 segundos)
+        time.sleep(random.uniform(1, 2))
+        
+        # buscamos las ofertas que esten visibles ahora
+        elems = driver.find_elements(By.CSS_SELECTOR, "li.ij-List-item.sui-PrimitiveLinkBox")
+        
+        nuevas = 0
+        for elem in elems:
+            if not es_oferta(elem):
+                continue # si es publicidad pasamos
+            
+            try:
+                # sacamos el link primero para ver si ya la tenemos
+                link = elem.find_element(By.CSS_SELECTOR, "a.ij-OfferCardContent-description-title-link").get_attribute("href")
+                
+                if link in ofertas_ya_sacadas:
+                    continue  # si ya esta en el set, saltamos a la siguiente
+                
+                # si es nueva, sacamos los datos
+                datos = sacar_datos(elem, driver)
+                
+                if datos:
+                    todas_ofertas.append(datos)
+                    ofertas_ya_sacadas.add(link) # la añadimos al set de procesadas
+                    nuevas += 1
+                    print(f"  -> Nueva oferta: {datos['titulo']} ({datos['empresa']})")
+            except:
+                continue
+        
+        # logica para saber si estamos atascados o hemos terminado
+        if nuevas > 0:
+            print(f"Scroll {contador_scrolls}: Encontradas {nuevas} ofertas nuevas")
+            veces_sin_ofertas = 0 # reseteamos el contador
+        else:
+            veces_sin_ofertas += 1
+            print(f"Scroll {contador_scrolls}: 0 nuevas...")
+        
+        # actualizamos la altura total por si ha crecido la pagina (carga dinamica)
+        nueva_altura_total = driver.execute_script("return document.body.scrollHeight")
+        if nueva_altura_total > altura_total:
+            altura_total = nueva_altura_total
+        
+        # si llevamos 5 scrolls seguidos sin encontrar nada nuevo, paramos
+        if veces_sin_ofertas >= 5:
+            print(f"Parece que no hay mas ofertas")
+            break
+    
+    print(f"Scraping terminado. Total encontradas: {len(todas_ofertas)}")
+    return todas_ofertas
+
 if __name__ == "__main__":
     driver = iniciar_chrome() # Iniciamos chrome con iniciar_chrome()
     driver.get(URL) # Abrimos la url
@@ -106,21 +194,8 @@ if __name__ == "__main__":
     check_captcha(driver)
     aceptar_cookies(driver)
     
-    print("Probando extraccion de las primeras ofertas visibles...")
+    # Probamos la funcion completa de scraping
+    ofertas = scrapear_ofertas(driver)
     
-    # buscamos los elementos de la lista (las tarjetas)
-    try:
-        elems = driver.find_elements(By.CSS_SELECTOR, "li.ij-List-item.sui-PrimitiveLinkBox")
-        
-        # Probamos a sacar datos de las 3 primeras que encuentre
-        for i, elem in enumerate(elems[:3]):
-            if es_oferta(elem):
-                datos = sacar_datos(elem, driver)
-                if datos:
-                    print(f"Oferta detectada: {datos['titulo']} en {datos['empresa']}")
-    except Exception as e:
-        print(f"Error en la prueba: {e}")
-
-    print("Prueba finalizada. Cerrando en 5 segundos")
-    time.sleep(5) # 5 segundos
+    print(f"Hecho! Se han extraido {len(ofertas)} ofertas en total.")
     driver.quit() # Cerramos chrome
