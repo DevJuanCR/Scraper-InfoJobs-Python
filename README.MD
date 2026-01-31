@@ -23,22 +23,24 @@ El script está diseñado específicamente para buscar ofertas de "Desarrollador
 
 1. Clonar el repositorio:
 
-git clone [https://github.com/DevJuanCR/Scraper-InfoJobs-Python.git](https://github.com/DevJuanCR/Scraper-InfoJobs-Python.git)
+```bash
+git clone https://github.com/DevJuanCR/Scraper-InfoJobs-Python.git
 cd Scraper-InfoJobs-Python
+```
 
 2. Instalar dependencias:
 
-pip install -r requirements.txt
+`pip install -r requirements.txt`
 
 ## Uso
 
 Ejecutar el script principal desde la terminal:
 
-python main.py
+`python main.py`
 
 El programa solicitará el número de páginas a escanear.
 
-Al finalizar, se generará un archivo ofertas_infojobs.csv en el directorio raíz con las siguientes columnas:
+Al finalizar, se generará un archivo `ofertas_infojobs.csv` en el directorio raíz con las siguientes columnas:
 
 **Título de la oferta**
 
