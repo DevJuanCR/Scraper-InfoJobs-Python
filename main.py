@@ -44,6 +44,60 @@ def aceptar_cookies(driver):
     except:
         print("No aparecio el banner de cookies") # puede que ya esten aceptadas
 
+def es_oferta(elem):
+    # funcion para filtrar si es un anuncio o una oferta real
+    try:
+        # si tiene clase banner, es publicidad, la ignoramos
+        elem.find_element(By.CLASS_NAME, "ij-OfferList-banner")
+        return False  
+    except:
+        pass
+    
+    # si tiene link en el titulo es oferta real
+    try:
+        elem.find_element(By.CSS_SELECTOR, "a.ij-OfferCardContent-description-title-link")
+        return True
+    except:
+        return False
+
+def sacar_datos(elem, driver):
+    # extraemos toda la info de la tarjeta de la oferta
+    try:
+        # hacemos scroll hasta el elemento para asegurarnos que carga (sin esto las ofertas no se cargaran)
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+        time.sleep(0.5)  
+        
+        # extraemos el titulo y enlace de la oferta
+        try:
+            titulo_elem = elem.find_element(By.CSS_SELECTOR, "a.ij-OfferCardContent-description-title-link")
+            titulo = titulo_elem.text.strip()
+            link = titulo_elem.get_attribute("href")
+        except:
+            return None # si no tiene titulo no nos sirve
+        
+        # extraemos la empresa que ha publicado la oferta
+        try:
+            empresa = elem.find_element(By.CSS_SELECTOR, "a.ij-OfferCardContent-description-subtitle-link").text.strip()
+        except:
+            empresa = "N/A" # Si no hay empresa se pone "N/A"
+        
+        # extraemos la ciudad / localidad
+        try:
+            ciudad = elem.find_element(By.CSS_SELECTOR, "span.ij-OfferCardContent-description-list-item-truncate").text.strip()
+        except:
+            ciudad = "N/A" # Si no hay ciudad se pone "N/A"
+            
+        # devolvemos un diccionario con los datos limpios
+        return {
+            "titulo": titulo,
+            "empresa": empresa,
+            "ciudad": ciudad,
+            "enlace": link
+        }
+    except Exception as e:
+        print(f"  Error sacando datos: {e}")
+        return None
+
 if __name__ == "__main__":
     driver = iniciar_chrome() # Iniciamos chrome con iniciar_chrome()
     driver.get(URL) # Abrimos la url
@@ -52,6 +106,21 @@ if __name__ == "__main__":
     check_captcha(driver)
     aceptar_cookies(driver)
     
-    print("Pagina lista. Cerrando en 5 segundos")
+    print("Probando extraccion de las primeras ofertas visibles...")
+    
+    # buscamos los elementos de la lista (las tarjetas)
+    try:
+        elems = driver.find_elements(By.CSS_SELECTOR, "li.ij-List-item.sui-PrimitiveLinkBox")
+        
+        # Probamos a sacar datos de las 3 primeras que encuentre
+        for i, elem in enumerate(elems[:3]):
+            if es_oferta(elem):
+                datos = sacar_datos(elem, driver)
+                if datos:
+                    print(f"Oferta detectada: {datos['titulo']} en {datos['empresa']}")
+    except Exception as e:
+        print(f"Error en la prueba: {e}")
+
+    print("Prueba finalizada. Cerrando en 5 segundos")
     time.sleep(5) # 5 segundos
     driver.quit() # Cerramos chrome
