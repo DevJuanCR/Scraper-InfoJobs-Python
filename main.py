@@ -1,5 +1,6 @@
 import time
 import random
+import csv
 import undetected_chromedriver as uc
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -10,7 +11,7 @@ URL = "https://www.infojobs.net/ofertas-trabajo/desarrollador-junior/espana" # U
 def iniciar_chrome():
     print("Abriendo Chrome...")
     # Ajusta version_main a tu versión de Chrome si es necesario
-    driver = uc.Chrome(version_main=114) # En este caso tengo la version 114 de chrome
+    driver = uc.Chrome(version_main=144) # En este caso tengo la version 144 de chrome
     return driver
 
 def check_captcha(driver):
@@ -161,7 +162,7 @@ def scrapear_ofertas(driver):
                     todas_ofertas.append(datos)
                     ofertas_ya_sacadas.add(link) # la añadimos al set de procesadas
                     nuevas += 1
-                    print(f"  -> Nueva oferta: {datos['titulo']} ({datos['empresa']})")
+                    print(f"Nueva oferta: {datos['titulo']} ({datos['empresa']})")
             except:
                 continue
         
@@ -186,16 +187,131 @@ def scrapear_ofertas(driver):
     print(f"Scraping terminado. Total encontradas: {len(todas_ofertas)}")
     return todas_ofertas
 
-if __name__ == "__main__":
-    driver = iniciar_chrome() # Iniciamos chrome con iniciar_chrome()
-    driver.get(URL) # Abrimos la url
+def scrapear_pagina_actual(driver):
+    # scropeamos todas las ofertas de la pagina actual haciendo scroll
+    print("Analizando pagina actual...")
     
-    # Llamamos a las funciones de captcha y cookies
+    ofertas_pagina = []
+    ids_procesados = set()
+    
+    # primero hacemos un scroll hasta abajo poco a poco para que cargue todo
+    altura = 0
+    altura_total = driver.execute_script("return document.body.scrollHeight")
+    while altura < altura_total:
+        altura += 400
+        driver.execute_script(f"window.scrollTo(0, {altura});")
+        time.sleep(0.5) # esperamos un poco a que cargue
+        altura_total = driver.execute_script("return document.body.scrollHeight")
+    
+    # volvemos arriba
+    driver.execute_script("window.scrollTo(0, 0);")
+    time.sleep(1)
+    
+    # ahora cogemos todos los elementos
+    try:
+        elems = driver.find_elements(By.CSS_SELECTOR, "li.ij-List-item.sui-PrimitiveLinkBox")
+        print(f"Elementos encontrados en la pagina: {len(elems)}")
+        
+        for elem in elems:
+            if not es_oferta(elem):
+                continue
+                
+            datos = sacar_datos(elem, driver)
+            if datos:
+                # usamos el enlace como ID unico para no repetir
+                if datos['enlace'] not in ids_procesados:
+                    ofertas_pagina.append(datos)
+                    ids_procesados.add(datos['enlace'])
+                    print(f"Oferta: {datos['titulo']} ({datos['empresa']})")
+                    
+    except Exception as e:
+        print(f"Error leyendo elementos: {e}")
+        
+    return ofertas_pagina
+
+def siguiente_pagina(driver):
+    # buscamos el boton de siguiente pagina y le damos click
+    try:
+        print("Buscando boton de siguiente pagina...")
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(2)
+        
+        # Buscamos el boton que contenga la palabra "Siguiente"
+        boton = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Siguiente')] | //li[contains(@class, 'next')]//a"))
+        )
+        
+        driver.execute_script("arguments[0].click();", boton)
+        print("Cambiando de pagina...")
+        time.sleep(3) # esperamos a que cargue la nueva pagina
+        return True
+    except:
+        print("No se encontro el boton siguiente o es la ultima pagina")
+        return False
+
+def guardar_csv(ofertas, nombre_archivo='ofertas_infojobs.csv'):
+    # guardamos los datos en un archivo csv
+    print(f"Guardando {len(ofertas)} ofertas en {nombre_archivo}...")
+    
+    try:
+        # abrimos el archivo en modo escritura (w) y utf-8 para las tildes
+        with open(nombre_archivo, 'w', newline='', encoding='utf-8') as archivo:
+            # definimos las columnas que va a tener el excel
+            columnas = ['titulo', 'empresa', 'ciudad', 'enlace']
+            
+            # creamos el escritor
+            writer = csv.DictWriter(archivo, fieldnames=columnas)
+            
+            # escribimos la cabecera (los titulos de las columnas)
+            writer.writeheader()
+            
+            # escribimos todas las filas con los datos
+            writer.writerows(ofertas)
+            
+        print(f"Archivo guardado correctamente: {nombre_archivo}")
+    except Exception as e:
+        print(f"Error al guardar el csv: {e}")
+
+if __name__ == "__main__":
+    # preguntamos al usuario cuantas paginas quiere
+    num_paginas = input("Cuantas paginas quieres scrapear? (Por defecto 1): ")
+    if not num_paginas or num_paginas == '0':
+        num_paginas = 1
+    else:
+        num_paginas = int(num_paginas)
+
+    driver = iniciar_chrome()
+    driver.get(URL)
+    
     check_captcha(driver)
     aceptar_cookies(driver)
     
-    # Probamos la funcion completa de scraping
-    ofertas = scrapear_ofertas(driver)
+    todas_las_ofertas = []
     
-    print(f"Hecho! Se han extraido {len(ofertas)} ofertas en total.")
-    driver.quit() # Cerramos chrome
+    # bucle para recorrer las paginas que ha pedido el usuario
+    pagina_actual = 1
+    while pagina_actual <= num_paginas:
+        print(f"PROCESANDO PAGINA {pagina_actual} de {num_paginas}")
+        
+        nuevas_ofertas = scrapear_pagina_actual(driver)
+        todas_las_ofertas.extend(nuevas_ofertas)
+        
+        print(f"Llevamos {len(todas_las_ofertas)} ofertas acumuladas")
+        
+        # si no es la ultima pagina que pidio el usuario, intentamos pasar pagina
+        if pagina_actual < num_paginas:
+            exito = siguiente_pagina(driver)
+            if not exito:
+                print("No se pudo pasar de pagina")
+                break
+        
+        pagina_actual += 1
+    
+    # guardamos todo al final
+    if todas_las_ofertas:
+        guardar_csv(todas_las_ofertas)
+    else:
+        print("No se han encontrado ofertas")
+    
+    print("Proceso finalizado")
+    driver.quit()
