@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+
+# Entornos virtuales
+venv/
+env/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos generados por el scraper
+salida/*.csv
+salida/*.json
+salida/historico/
+!salida/.gitkeep
+
+# CSV antiguo en la raiz
+ofertas_infojobs.csv
