@@ -1,4 +1,4 @@
-# url base de infojobs, luego le añadimos el puesto y la ubicacion
+# url base de infojobs
 URL_BASE = "https://www.infojobs.net/ofertas-trabajo"
 
 # selectores css y xpath para encontrar elementos en la pagina

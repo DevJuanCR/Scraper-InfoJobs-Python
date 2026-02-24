@@ -104,7 +104,7 @@ def main():
 
         print(f"\nScraping completado: {len(todas_las_ofertas)} ofertas en {pagina_actual} paginas")
 
-        # si el usuario quiere extraemos la experiencia visitando cada oferta
+        # si el usuario selecionar extraer experiencia extraemos la experiencia visitando cada oferta
         if extraer_exp and todas_las_ofertas:
             extraer_experiencias(driver, todas_las_ofertas)
 

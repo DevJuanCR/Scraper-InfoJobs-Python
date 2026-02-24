@@ -8,7 +8,6 @@ from configuracion import SELECTORES, TIEMPOS
 
 def iniciar_chrome():
     print("Abriendo Chrome...")
-    # sin version_main para que detecte solo la version instalada
     driver = uc.Chrome()
     return driver
 
@@ -18,7 +17,6 @@ def cerrar_chrome(driver):
         driver.quit()
     except OSError:
         pass
-    # parcheamos __del__ para que no intente cerrar otra vez en windows
     try:
         driver.__class__.__del__ = lambda self: None
     except:

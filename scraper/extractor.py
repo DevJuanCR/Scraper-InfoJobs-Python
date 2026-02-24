@@ -92,7 +92,7 @@ def extraer_oferta(elemento, driver):
             experiencia="N/A",
         )
     except Exception as e:
-        print(f"  Error extrayendo oferta: {e}")
+        print(f"Error extrayendo oferta: {e}")
         return None
 
 
@@ -121,7 +121,7 @@ def extraer_experiencias(driver, ofertas):
         except:
             print(" -> No disponible")
 
-        # espera random para parecer humano
+        # espera random
         time.sleep(random.uniform(TIEMPOS["entre_ofertas_min"], TIEMPOS["entre_ofertas_max"]))
 
     print("\nExperiencias extraidas")

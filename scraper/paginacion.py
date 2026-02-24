@@ -70,7 +70,7 @@ def siguiente_pagina(driver):
 
         driver.execute_script("arguments[0].click();", boton)
         print("Cambiando de pagina...")
-        # espera random para parecer humano
+        # espera random
         time.sleep(TIEMPOS["entre_paginas"] + random.uniform(0, 1))
         return True
     except:
