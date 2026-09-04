@@ -4,6 +4,7 @@ from scraper.extractor import extraer_experiencias
 from exportar.exportar_csv import guardar_csv
 from exportar.exportar_json import guardar_json
 from historial.rastreador import detectar_nuevas
+from filtros.salario import filtrar_por_salario
 
 
 def preguntar_datos():
@@ -42,12 +43,23 @@ def preguntar_datos():
     if formato not in ["1", "2", "3"]:
         formato = "3"
 
+    print("\nSalario minimo anual en euros? (enter para no filtrar)")
+    print("(las ofertas sin salario publicado se mantienen)")
+    salario_minimo = input("Salario minimo: ").strip().replace(".", "")
+
+    if salario_minimo.isdigit():
+        salario_minimo = int(salario_minimo)
+    else:
+        if salario_minimo:
+            print("  Valor no valido, no se filtra por salario")
+        salario_minimo = 0
+
     print("\nExtraer experiencia requerida de cada oferta?")
     print("(Requiere visitar cada oferta individualmente, mas lento)")
     extraer_exp = input("s/n (por defecto n): ").strip().lower()
     extraer_exp = extraer_exp == "s"
 
-    return puesto, ubicacion, paginas, formato, extraer_exp
+    return puesto, ubicacion, paginas, formato, salario_minimo, extraer_exp
 
 
 def exportar_ofertas(ofertas, formato):
@@ -62,7 +74,7 @@ def exportar_ofertas(ofertas, formato):
 
 
 def main():
-    puesto, ubicacion, paginas, formato, extraer_exp = preguntar_datos()
+    puesto, ubicacion, paginas, formato, salario_minimo, extraer_exp = preguntar_datos()
 
     url = construir_url(puesto, ubicacion)
     print(f"\nURL generada: {url}")
@@ -107,6 +119,12 @@ def main():
         # si el usuario selecionar extraer experiencia extraemos la experiencia visitando cada oferta
         if extraer_exp and todas_las_ofertas:
             extraer_experiencias(driver, todas_las_ofertas)
+
+        # nos quedamos solo con las que llegan al salario minimo que pidio el usuario
+        if salario_minimo:
+            antes = len(todas_las_ofertas)
+            todas_las_ofertas = filtrar_por_salario(todas_las_ofertas, salario_minimo)
+            print(f"\nFiltro de salario ({salario_minimo} euros): {len(todas_las_ofertas)} de {antes} ofertas")
 
         # comparamos con el historico para ver cuales son nuevas
         nuevas = detectar_nuevas(todas_las_ofertas)
