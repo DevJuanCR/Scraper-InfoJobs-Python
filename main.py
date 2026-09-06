@@ -3,6 +3,7 @@ from scraper.paginacion import scrapear_pagina, siguiente_pagina
 from scraper.extractor import extraer_experiencias
 from exportar.exportar_csv import guardar_csv
 from exportar.exportar_json import guardar_json
+from exportar.exportar_excel import guardar_excel
 from historial.rastreador import detectar_nuevas
 from filtros.salario import filtrar_por_salario
 
@@ -38,9 +39,11 @@ def preguntar_datos():
     print("\nFormato de exportacion:")
     print("  1 - CSV")
     print("  2 - JSON")
-    print("  3 - Ambos")
+    print("  3 - CSV y JSON")
+    print("  4 - Excel")
+    print("  5 - Todos")
     formato = input("Elige formato (por defecto 3): ").strip()
-    if formato not in ["1", "2", "3"]:
+    if formato not in ["1", "2", "3", "4", "5"]:
         formato = "3"
 
     print("\nSalario minimo anual en euros? (enter para no filtrar)")
@@ -67,10 +70,12 @@ def exportar_ofertas(ofertas, formato):
         print("No se han encontrado ofertas para exportar")
         return
 
-    if formato in ["1", "3"]:
+    if formato in ["1", "3", "5"]:
         guardar_csv(ofertas)
-    if formato in ["2", "3"]:
+    if formato in ["2", "3", "5"]:
         guardar_json(ofertas)
+    if formato in ["4", "5"]:
+        guardar_excel(ofertas)
 
 
 def main():

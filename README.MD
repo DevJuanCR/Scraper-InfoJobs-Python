@@ -20,7 +20,7 @@ Herramienta de web scraping desarrollada en Python que extrae ofertas de empleo 
 | **Autodetección de Chrome** | Detecta automáticamente la versión de Chrome instalada |
 | **Gestión de cookies** | Acepta el banner GDPR de forma automática |
 | **Detección de captcha** | Pausa y espera resolución manual si aparece un captcha |
-| **Exportación flexible** | CSV, JSON o ambos formatos |
+| **Exportación flexible** | CSV, JSON, Excel o todos a la vez |
 | **Historial** | Detecta ofertas nuevas comparando con ejecuciones anteriores |
 | **Comportamiento humano** | Tiempos aleatorios entre acciones para evitar bloqueos |
 
@@ -51,10 +51,13 @@ Scraper-InfoJobs-Python/
 │   └── oferta.py            # Dataclass que representa una oferta
 ├── exportar/
 │   ├── exportar_csv.py      # Exportacion a CSV
-│   └── exportar_json.py     # Exportacion a JSON
+│   ├── exportar_json.py     # Exportacion a JSON
+│   └── exportar_excel.py    # Exportacion a Excel
+├── filtros/
+│   └── salario.py           # Filtro por salario minimo
 ├── historial/
 │   └── rastreador.py        # Historico y deteccion de ofertas nuevas
-├── salida/                  # Archivos generados (CSV, JSON, historico)
+├── salida/                  # Archivos generados (CSV, JSON, Excel, historico)
 ├── requirements.txt
 └── README.md
 ```
